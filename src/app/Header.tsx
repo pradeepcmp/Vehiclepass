@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { LogOut, Menu, X, Copyright } from "lucide-react";
-import logo from '../public/SPACE LOGO 3D 03.png';
+import logo from '@/app/Images/SPACE LOGO 3D 03.png';
 import Image from 'next/image';
 import axios from 'axios';
 import Cookies from 'js-cookie';

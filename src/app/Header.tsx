@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { LogOut, Menu, X, Copyright } from "lucide-react";
-import logo from '@/app/Images/SPACE LOGO 3D 03.png';
+import logo from '../public/SPACE LOGO 3D 03.png';
 import Image from 'next/image';
-import axios from 'axios'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import PrivateRoute from '@/app/protectedRoute'
+import axios from 'axios';
+import Cookies from 'js-cookie';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import PrivateRoute from '@/app/protectedRoute';
 
 const api = axios.create({
   baseURL: 'https://cust.spacetextiles.net',
@@ -17,110 +18,83 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-})
+});
+
+interface UserData {
+  user_code: string;
+  user_role?: string;
+  role?: string;
+}
 
 export default function HeaderWithFooter() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
-  const router = useRouter()
-  const [error, setError] = useState(false)
-  const [errorMessage, setErrorMessage] = useState('')
+  const router = useRouter();
+  const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const clearSpecificCookies = () => {
     try {
-      // List of cookies to clear
-      const cookiesToClear = ['user', 'token', 'accesspoint_hash', 'session']
-      
-      // List of paths where cookies might be set
-      const paths = ['/', '/parkinghome' ]
-      
-      cookiesToClear.forEach(cookieName => {
-        paths.forEach(path => {
-          document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path}`
-        })
-      })
-      
-      console.log('Specific cookies cleared successfully')
-      return true
+      ['user', 'token', 'accesspoint_hash', 'session'].forEach(cookie => {
+        document.cookie = `${cookie}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      });
+      console.log('Specific cookies cleared successfully');
     } catch (e) {
-      console.error('Error clearing cookies:', e)
-      return false
+      console.error('Error clearing cookies:', e);
     }
-  }
+  };
 
-  const getUserDataFromCookie = () => {
+  const decodeUserDataCookie = (): UserData | null => {
     try {
-      const cookies = document.cookie.split(';')
-      
-      for (const cookie of cookies) {
-        const [name, value] = cookie.trim().split('=')
-        
-        if (name.trim() === 'user') {
-          const decodedValue = decodeURIComponent(value)
-          const userData = JSON.parse(decodedValue)
-          
-          if (userData && userData.user_code) {
-            return {
-              user_code: userData.user_code,
-              user_name: userData.user_name
-            }
-          }
-        }
-      }
-      return null
-    } catch (e) {
-      console.error('Error getting user data from cookie:', e)
-      return null
+      const userCookieValue = Cookies.get('user');
+      if (!userCookieValue) return null;
+      const decodedValue = decodeURIComponent(userCookieValue);
+      const userData = JSON.parse(decodedValue) as UserData;
+      return userData;
+    } catch (error) {
+      console.error('Cookie parsing error:', error);
+      return null;
     }
-  }
+  };
 
   const handleLogout = async () => {
     try {
-      const userData = getUserDataFromCookie()
-      
+      const userData = decodeUserDataCookie();
       if (!userData || !userData.user_code) {
-        clearSpecificCookies()
-        router.push('/')
-        return
+        clearSpecificCookies();
+        router.push('/');
+        return;
       }
-      
+
       const response = await api.post('/order-logout', {
-        user_code: userData.user_code
-      })
-  
+        user_code: userData.user_code,
+      });
+
       if (response.data.success) {
-        clearSpecificCookies()
-        router.push('/')
+        clearSpecificCookies();
+        router.push('/');
       } else {
-        throw new Error(response.data.message || 'Logout failed')
+        throw new Error(response.data.message || 'Logout failed');
       }
     } catch (error) {
-      console.error('Logout error:', error)
-      
-      // Fallback logout mechanism
-      clearSpecificCookies()
-      
-      setErrorMessage('Logout failed. Redirecting...')
-      setError(true)
-      
-      setTimeout(() => router.push('/login'), 1500)
-    } finally {
-
+      console.error('Logout error:', error);
+      setErrorMessage('Logout failed. Redirecting...');
+      setError(true);
+      setTimeout(() => router.push('/'), 1500);
     }
-  }
+  };
 
   if (pathname === "/" || pathname === "/track" || pathname === "/parkinglist") {
-    return <></>;
+    return null;
   }
 
   return (
@@ -129,14 +103,14 @@ export default function HeaderWithFooter() {
       <header
         className={`fixed top-0 z-50 w-full transition-all duration-300 ${
           scrolled
-            ? "bg-white dark:bg-slate-900/20 backdrop-blur-sm shadow-lg"
+            ? "bg-white backdrop-blur-sm shadow-lg"
             : "bg-white dark:bg-white"
         }`}
       >
         <div className="mx-auto max-w-12xl">
           <div className="flex h-20 items-center justify-between px-4 lg:px-8">
             {/* Logo and Company Name */}
-            <div onClick={() => router.push('/parkinghome')} className="flex items-center space-x-4 group">
+            <div onClick={() => router.back()} className="flex items-center space-x-4 group">
               <div className="relative h-14 w-auto transition-transform duration-300 group-hover:scale-105">
                 <Image
                   src={logo}
@@ -153,13 +127,14 @@ export default function HeaderWithFooter() {
                   Space Group of Companies
                 </h1>
                 <p className="text-sm font-medium text-blue-600 dark:text-blue-400 tracking-wide">
-                  Enterprise Smart Parking Management
+                  Customer Order Management
                 </p>
               </div>
             </div>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-4">
+              <div className="pr-4 mr-2 border-r border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-3">
               <div className="hidden md:flex items-center space-x-3 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-100">
                 <span className="flex items-center text-gray-700">
@@ -170,6 +145,7 @@ export default function HeaderWithFooter() {
                 <span className="text-gray-700 font-medium text-sm">{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
               </div>
             </div>
+              </div>
               <Button
                 onClick={handleLogout}
                 variant="outline"

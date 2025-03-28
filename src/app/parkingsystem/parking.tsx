@@ -214,7 +214,7 @@ export default function ParkingEntryForm() {
   const advancePayment = vehicleType === 'car' ? 100 : 0;
 
   async function onSubmit(data: EntryFormValues) {
-
+   const userData = decodeUserDataCookie();
     try {
       setSubmitting(true);
       const checkResponse = await axios.get(`${PARKING_CONNECT}/Parking-checkparking/${data.mobileno}`);
@@ -244,7 +244,8 @@ export default function ParkingEntryForm() {
       balance_amount: estimatedAmount - advancePayment,
       paid: advancePayment >= estimatedAmount,
       key_handover: data.vehicleType === 'car' ? data.keyHandover : 'no',
-      status: 'parked'
+      status: 'parked',
+      branch: userData.branch || null,
     };
 
     try {

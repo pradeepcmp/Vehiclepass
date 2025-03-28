@@ -2,6 +2,7 @@ export interface UserData {
     user_code?: string;
     user_name?: string;
     user_role?: string;
+    branch?: string | null;
     parkingArea: string | null;
     // Add fallback properties to handle different data structures
     screens?: Array<{

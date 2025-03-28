@@ -27,6 +27,7 @@ export interface Vehicle {
   keyhandover?: string;
   redeem_status?: string;
   paymentMethod?:string;
+  branch?: string;
 }
 
 export interface ParkingSlot {

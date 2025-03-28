@@ -338,9 +338,9 @@ const sendOTP = async () => {
   
       if (response.data.success) {
         // Clear existing cookies first
-        // deleteCookie("token");
-        // deleteCookie("user");
-        // deleteCookie("accesspoint_hash");
+        deleteCookie("token");
+        deleteCookie("user");
+        deleteCookie("accesspoint_hash");
 
         // Prepare user data with extended information
         const cookieExpiry = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60;

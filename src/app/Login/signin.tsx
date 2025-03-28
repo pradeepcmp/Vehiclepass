@@ -874,7 +874,7 @@ useEffect(() => {
     <div className="flex items-center space-x-2">
   <Checkbox
     id="rememberMe"
-    checked={rememberMe}
+    // checked={rememberMe}
     onCheckedChange={(checked) => setRememberMe(checked === true)}
     className={darkMode ? 'data-[state=checked]:bg-blue-600 border-slate-600' : 'data-[state=checked]:bg-blue-600'}
   />

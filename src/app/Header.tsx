@@ -127,7 +127,7 @@ export default function HeaderWithFooter() {
                   Space Group of Companies
                 </h1>
                 <p className="text-sm font-medium text-blue-600 dark:text-blue-400 tracking-wide">
-                  Customer Order Management
+                  Smart Parking Management
                 </p>
               </div>
             </div>

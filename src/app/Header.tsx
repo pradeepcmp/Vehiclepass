@@ -110,7 +110,7 @@ export default function HeaderWithFooter() {
         <div className="mx-auto max-w-12xl">
           <div className="flex h-20 items-center justify-between px-4 lg:px-8">
             {/* Logo and Company Name */}
-            <div onClick={() => router.back()} className="flex items-center space-x-4 group">
+            <div className="flex items-center space-x-4 group">
               <div className="relative h-14 w-auto transition-transform duration-300 group-hover:scale-105">
                 <Image
                   src={logo}

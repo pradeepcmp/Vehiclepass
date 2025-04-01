@@ -209,7 +209,7 @@ export default function ParkingEntryForm() {
   }, [vehicleType, setSelectedVehicleType, form]);
 
   // Calculate rates based on vehicle type
-  const hourlyRate = vehicleType === 'car' ? 100 : 50;
+  const hourlyRate = vehicleType === 'car' ? 100 : 20;
   const estimatedAmount = 2 * hourlyRate;
   const advancePayment = vehicleType === 'car' ? 100 : 0;
 

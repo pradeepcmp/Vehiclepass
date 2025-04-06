@@ -28,6 +28,7 @@ export interface Vehicle {
   redeem_status?: string;
   paymentMethod?:string;
   branch?: string;
+  advancePayments?: string;
 }
 
 export interface ParkingSlot {

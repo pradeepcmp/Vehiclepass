@@ -362,6 +362,7 @@ const sendOTP = async () => {
           ...response.data.user,
           blockchainVerification: blockchainHash,
           parkingArea: formData.parkingArea,
+          branch: formData.branch,
           hasParkingAccess: userPermissions.hasParkingAccess,
           hasParkingEntryAccess: userPermissions.hasParkingEntryAccess
         };

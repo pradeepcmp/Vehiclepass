@@ -286,11 +286,19 @@ const confirmVehicleExit = async () => {
       const entryTime = exitVehicle.entry_time ? new Date(exitVehicle.entry_time) : new Date();
       const charges = calculateParkingCharges({...exitVehicle, entry_time: entryTime}, currentTime);
       
-      // Validate amount taken if payment is needed and not billed or refund
-      if (paymentMethod !== "billed" && paymentMethod !== "refund" && charges.dueAmount > 0 && !amountTaken.trim() && exitVehicle.redeem_status !== "Y") {
-        setAmountError(true);
-        return; // Stop execution if validation fails
-      }
+// Validate amount taken if payment is needed and not billed or refund
+if (paymentMethod !== "billed" && paymentMethod !== "refund" && charges.dueAmount > 0 && exitVehicle.redeem_status !== "Y") {
+  if (!amountTaken.trim()) {
+    setAmountError(true);
+    return;
+  }
+  
+  const amountValue = parseFloat(amountTaken);
+  if (amountValue > charges.dueAmount) {
+    setAmountError(true);
+    return;
+  }
+}
       
       setExitingVehicleId(exitVehicle.id);
       
@@ -781,14 +789,22 @@ const confirmVehicleExit = async () => {
           value={amountTaken}
           maxLength={4}
           onChange={(e) => {
-            setAmountTaken(e.target.value);
+            const newAmount = e.target.value;
+            setAmountTaken(newAmount);
             setAmountError(false);
+            
+            // Prevent amount greater than due amount
+            if (newAmount && parseFloat(newAmount) > charges.dueAmount) {
+              setAmountError(true);
+            }
           }}
           className={`pl-8 ${amountError ? 'border-red-300' : ''}`}
         />
-        {amountError && (
-          <p className="text-red-500 text-xs mt-1">Amount is required</p>
-        )}
+{amountError && (
+  <p className="text-red-500 text-xs mt-1">
+    {amountTaken ? `Amount cannot exceed ₹${charges.dueAmount}` : 'Amount is required'}
+  </p>
+)}
       </div>
     </div>
   )}

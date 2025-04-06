@@ -1,4 +1,4 @@
-import { useState,useEffect } from 'react';
+import { useState,useEffect,useMemo } from 'react';
 import { useAtom } from 'jotai';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
@@ -15,9 +15,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { CarFront, Bike, Clock, CreditCard, Receipt, MapPin, AlertTriangle, Key } from 'lucide-react';
 import Cookies from 'js-cookie';
+import useSWR from 'swr';
 import { UserData } from '@/app/types/Routetypes'
 import PARKING_CONNECT from '@/app/connection/config'
 
+const fetcher = (url: string) => axios.get(url).then(res => res.data);
 
 export default function ParkingEntryForm() {
   const [vehicles, setVehicles] = useAtom(vehiclesAtom);
@@ -37,6 +39,8 @@ export default function ParkingEntryForm() {
     keyHandover: "no",
     paymentMethod: "cash",
   };
+
+  const [isStatsPopupOpen, setIsStatsPopupOpen] = useState(false);
 
   const form = useForm<EntryFormValues>({
     resolver: zodResolver(entryFormSchema),
@@ -83,8 +87,77 @@ export default function ParkingEntryForm() {
       throw error;
     }
   };
+  
+// Add this new effect to fetch the parking statistics
+const { data: statsData, error: statsError, mutate: mutateStats } = useSWR(() => {
+  try {
+    const userData = decodeUserDataCookie();
+    const parkingArea = userData.parkingArea?.trim();
+    
+    if (!parkingArea) return null;
+    
+    return `${PARKING_CONNECT}/Parking-statics/${encodeURIComponent(parkingArea)}`;
+  } catch (error) {
+    console.error('Error getting parking area for stats:', error);
+    return null;
+  }
+}, fetcher);
 
-
+// Create a derived parkingStats object from the SWR data
+const parkingStats = useMemo(() => {
+  if (!statsData || !statsData.statistics) {
+    return {
+      exitVehicleCount: 0,
+      parkedVehicleCount: 0,
+      advancePaymentCount: 0,
+      advanceAmount: 0, // Add this line
+      totalAmount: 0,
+      amountTaken: 0
+    };
+  }
+  
+  try {
+    const userData = decodeUserDataCookie();
+    const parkingArea = userData.parkingArea?.trim();
+    
+    if (!parkingArea) return {
+      exitVehicleCount: 0,
+      parkedVehicleCount: 0,
+      advancePaymentCount: 0,
+      advanceAmount: 0, // Add this line
+      totalAmount: 0,
+      amountTaken: 0
+    };
+    
+    const areaStats = statsData.statistics.byParkingArea[parkingArea] || {
+      parked: 0,
+      exited: 0,
+      advancePayments: 0,
+      totalAmount: 0,
+      amountCollected: 0,
+      advanceAmount: 0 // Add this line
+    };
+    
+    return {
+      exitVehicleCount: areaStats.exited,
+      parkedVehicleCount: areaStats.parked,
+      advancePaymentCount: areaStats.advancePayments,
+      advanceAmount: areaStats.advanceAmount, // Add this line
+      totalAmount: areaStats.totalAmount,
+      amountTaken: areaStats.amountCollected
+    };
+  } catch (error) {
+    console.error('Error processing stats data:', error);
+    return {
+      exitVehicleCount: 0,
+      parkedVehicleCount: 0,
+      advancePaymentCount: 0,
+      advanceAmount: 0, // Add this line
+      totalAmount: 0,
+      amountTaken: 0
+    };
+  }
+}, [statsData]);
 
   const vehicleType = form.watch("vehicleType");
   const mobileNo = form.watch("mobileno");
@@ -156,48 +229,53 @@ export default function ParkingEntryForm() {
   
   const handlePlateNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    form.setValue('plateNumber', value.toUpperCase(), { shouldValidate: true });
+    const filteredValue = value.replace(/[^a-zA-Z0-9]/g, '');
+    form.setValue('plateNumber', filteredValue.toUpperCase(), { shouldValidate: true });
   };
 
-  useEffect(() => {
-    if (mobileNo && mobileNo.length === 10) {
-      setChecking(true);
-      const checkMobileNumber = async () => {
-        try {
-          const response = await axios.get(`${PARKING_CONNECT}/Parking-checkparking/${mobileNo}`);
-
-          if (response.data.exists) {
-            setMobileExists(true);
-            if (!notificationShown) {
-              showNotification({
-                type: 'warning',
-                title: 'Vehicle Already Parked',
-                message: `Mobile number ${mobileNo} already has a vehicle parked in the system.`,
-                duration: 5000,
-              });
-              setNotificationShown(true);
-            }
-          } else {
-            setMobileExists(false);
-            setNotificationShown(false);
-          }
-        } catch (error) {
-          console.error('Error checking mobile number:', error);
-          setMobileExists(false);
-        } finally {
-          setChecking(false);
-        }
-      };
-
-      const timeoutId = setTimeout(() => {
-        checkMobileNumber();
-      }, 800);
-      return () => clearTimeout(timeoutId);
-    } else {
-      setMobileExists(false);
-      setNotificationShown(false);
+  // Replace your useEffect for mobile number checking with this:
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { data: mobileCheckData, error: mobileCheckError } = useSWR(
+  () => mobileNo && mobileNo.length === 10 ? `${PARKING_CONNECT}/Parking-checkparking/${mobileNo}` : null,
+  fetcher,
+  { 
+    dedupingInterval: 2000,
+    onSuccess: (data) => {
+      if (data?.exists && !notificationShown) {
+        showNotification({
+          type: 'warning',
+          title: 'Vehicle Already Parked',
+          message: `Mobile number ${mobileNo} already has a vehicle parked in the system.`,
+          duration: 5000,
+        });
+        setNotificationShown(true);
+      } else if (!data?.exists) {
+        setNotificationShown(false);
+      }
     }
-  }, [mobileNo, showNotification, notificationShown]);
+  }
+);
+
+// Update the mobileExists state to use SWR data
+useEffect(() => {
+  if (mobileCheckData) {
+    setMobileExists(mobileCheckData.exists);
+    setChecking(false);
+  } else {
+    setMobileExists(false);
+  }
+}, [mobileCheckData]);
+
+// Update the checking state
+useEffect(() => {
+  if (mobileNo && mobileNo.length === 10) {
+    setChecking(true);
+  } else {
+    setChecking(false);
+    setMobileExists(false);
+    setNotificationShown(false);
+  }
+}, [mobileNo]);
 
   useEffect(() => {
     setSelectedVehicleType(vehicleType as 'car' | 'bike');
@@ -209,7 +287,7 @@ export default function ParkingEntryForm() {
   }, [vehicleType, setSelectedVehicleType, form]);
 
   // Calculate rates based on vehicle type
-  const hourlyRate = vehicleType === 'car' ? 100 : 20;
+  const hourlyRate = vehicleType === 'car' ? 100 : 50;
   const estimatedAmount = 2 * hourlyRate;
   const advancePayment = vehicleType === 'car' ? 100 : 0;
 
@@ -280,7 +358,7 @@ export default function ParkingEntryForm() {
           }
         }
       });
-
+      mutateStats();
       form.reset(defaultValues);
       setMobileExists(false);
     } catch (error) {
@@ -300,7 +378,79 @@ export default function ParkingEntryForm() {
 
   return (
     <div className="w-full">
+              {/* Add Statistics Button */}
+<div className="mt-4 flex justify-end">
+  <Button 
+    type="button"
+    onClick={() => setIsStatsPopupOpen(true)}
+    className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg shadow-md text-sm font-medium"
+  >
+    Show Statistics
+  </Button>
+</div>
+
+{/* Statistics Popup */}
+{isStatsPopupOpen && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+      {/* Header remains the same */}
+      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-blue-50">
+        <h3 className="text-lg font-bold text-blue-700">Parking Area Statistics</h3>
+        <Button 
+          type="button" 
+          onClick={() => setIsStatsPopupOpen(false)}
+          variant="ghost" 
+          className="h-8 w-8 p-0 rounded-full"
+        >
+          ✕
+        </Button>
+      </div>
+      <div className="p-6">
+        {!statsData && !statsError ? (
+          <div className="flex justify-center items-center py-8">
+            <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+        ) : statsError ? (
+          <div className="text-red-500 text-center py-8">
+            Failed to load statistics. Please try again.
+          </div>
+        ) : (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-600">Parked Vehicles</span>
+            <span className="font-bold text-blue-600">{parkingStats.parkedVehicleCount}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-600">Exited Vehicles</span>
+            <span className="font-bold text-green-600">{parkingStats.exitVehicleCount}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-600">Advance Payments</span>
+            <span className="font-bold text-amber-600">{parkingStats.advancePaymentCount}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-600">Advance Amount</span>
+            <span className="font-bold text-purple-600">₹{parkingStats.advanceAmount.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-600">Total Amount</span>
+            <span className="font-bold text-green-600">₹{parkingStats.totalAmount.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-600">Amount Collected</span>
+            <span className="font-bold text-red-600">₹{parkingStats.amountTaken.toFixed(2)}</span>
+          </div>
+        </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
       <CardContent className="pt-6">
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

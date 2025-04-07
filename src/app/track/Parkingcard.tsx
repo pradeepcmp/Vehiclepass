@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { ExtendedVehicle } from '@/app/types/parkingTypes';
-import { formatDuration } from '@/app/utils/parking';
+import { formatDuration,calculateParkingCharges } from '@/app/utils/parking';
 import QRCodeGenerator from '@/app/service/QRGenerator';
 import LoadingAnimation from '@/app/service/Loadinganimation';
 import NoVehiclesAnimation from '@/app/service/NoVehiclesFound';
@@ -82,6 +82,39 @@ const LiveTimer = ({ entryTimeStr }: { entryTimeStr: string | undefined }) => {
     return <span>Loading...</span>;
   }
   return <span>{duration}</span>;
+};
+const LiveParkingCharges = ({ vehicle }: { vehicle: ExtendedVehicle }) => {
+  const [charges, setCharges] = useState<{
+    hours: number;
+    hourlyRate: number;
+    finalCharge: number;
+    advance_payment: number;
+    refundAmount: number;
+    dueAmount: number;
+  } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+    if (!vehicle.entry_time) {
+      return;
+    }
+    
+    const updateCharges = () => {
+      const currentTime = new Date();
+      const chargesInfo = calculateParkingCharges(vehicle, currentTime);
+      setCharges(chargesInfo);
+    };
+    
+    updateCharges();
+    const intervalId = setInterval(updateCharges, 60000); // Update every minute
+    
+    return () => clearInterval(intervalId);
+  }, [vehicle]);
+  
+  if (!mounted || !charges) {
+    return <span>Calculating...</span>;
+  }
 };
 
 const fetcher = async (url: string) => {
@@ -355,6 +388,13 @@ const ParkingCard = () => {
                       <LiveTimer entryTimeStr={entryTimeDisplay} />
                     </p>
                   </div>
+                  <div className="bg-gradient-to-br from-white to-zinc-100 p-3 rounded-lg shadow-md backdrop-blur-sm border border-zinc-100 overflow-hidden relative">
+  <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white to-transparent opacity-80"></div>
+  <p className="text-gray-500 text-xs font-medium relative z-10">Parking Charges</p>
+  <div className="mb-0 text-sm relative z-10">
+    <LiveParkingCharges vehicle={vehicle} />
+  </div>
+</div>
                   <div className="bg-gradient-to-br from-white to-zinc-100 p-3 rounded-lg shadow-md backdrop-blur-sm border border-zinc-100 overflow-hidden relative">
                     <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white to-transparent opacity-80"></div>
                     <p className="text-gray-500 text-xs font-medium relative z-10">Round Of Hours</p>

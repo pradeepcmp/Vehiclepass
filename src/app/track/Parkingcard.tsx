@@ -115,7 +115,9 @@ const LiveParkingCharges = ({ vehicle }: { vehicle: ExtendedVehicle }) => {
   if (!mounted || !charges) {
     return <span>Calculating...</span>;
   }
-
+  if (vehicle.redeem_status === "Y") {
+    return <span className="font-semibold text-blue-600">Billed</span>;
+  }
   // Add this return statement to display the charges
   return (
     <>
@@ -137,7 +139,8 @@ const fetcher = async (url: string) => {
     reachTime: vehicle.reachTime ? String(vehicle.reachTime) : undefined,
     entry_time: vehicle.entry_time || vehicle.entryTime,
     formattedReachTime: vehicle.reachTime ? formatTime(String(vehicle.reachTime)) : undefined,
-    key_handover: vehicle.key_handover || "no"
+    key_handover: vehicle.key_handover || "no",
+    redeem_status: vehicle.redeem_status
   }));
   
   return processedVehicles;

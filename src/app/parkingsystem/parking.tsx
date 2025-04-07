@@ -383,7 +383,7 @@ useEffect(() => {
   <Button 
     type="button"
     onClick={() => setIsStatsPopupOpen(true)}
-    className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg shadow-md text-sm font-medium"
+    className="bg-sky-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg shadow-md text-sm font-medium"
   >
     Show Statistics
   </Button>

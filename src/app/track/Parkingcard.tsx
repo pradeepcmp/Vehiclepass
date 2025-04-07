@@ -115,6 +115,17 @@ const LiveParkingCharges = ({ vehicle }: { vehicle: ExtendedVehicle }) => {
   if (!mounted || !charges) {
     return <span>Calculating...</span>;
   }
+
+  // Add this return statement to display the charges
+  return (
+    <>
+      <span className={`font-semibold ${charges.dueAmount > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+        ₹{charges.finalCharge}
+        {charges.dueAmount > 0 && ` (Due: ₹${charges.dueAmount})`}
+        {charges.refundAmount > 0 && ` (Refund: ₹${charges.refundAmount})`}
+      </span>
+    </>
+  );
 };
 
 const fetcher = async (url: string) => {
@@ -388,18 +399,22 @@ const ParkingCard = () => {
                       <LiveTimer entryTimeStr={entryTimeDisplay} />
                     </p>
                   </div>
-                  <div className="bg-gradient-to-br from-white to-zinc-100 p-3 rounded-lg shadow-md backdrop-blur-sm border border-zinc-100 overflow-hidden relative">
-  <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white to-transparent opacity-80"></div>
-  <p className="text-gray-500 text-xs font-medium relative z-10">Parking Charges</p>
-  <div className="mb-0 text-sm relative z-10">
-    <LiveParkingCharges vehicle={vehicle} />
-  </div>
-</div>
+
                   <div className="bg-gradient-to-br from-white to-zinc-100 p-3 rounded-lg shadow-md backdrop-blur-sm border border-zinc-100 overflow-hidden relative">
                     <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white to-transparent opacity-80"></div>
                     <p className="text-gray-500 text-xs font-medium relative z-10">Round Of Hours</p>
                     <p className="mb-0 font-semibold relative z-10">{roundedHours} hrs</p>
                   </div>
+                </div>
+
+                <div className="mt-6 p-4 bg-gradient-to-br from-white to-zinc-100 rounded-lg shadow-md backdrop-blur-sm border border-zinc-100 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white to-transparent opacity-80"></div>
+                  <p className="text-gray-500 text-xs font-medium relative z-10">
+                  Parking Charges
+                  </p>
+                  <div className="mb-0 text-sm relative z-10">
+    <LiveParkingCharges vehicle={vehicle} />
+  </div>
                 </div>
 
                 <div className="mt-6 p-4 bg-gradient-to-br from-white to-zinc-100 rounded-lg shadow-md backdrop-blur-sm border border-zinc-100 relative overflow-hidden">
@@ -413,6 +428,7 @@ const ParkingCard = () => {
                     </p>
                   )}
                 </div>
+                
                 <div className="mt-6 p-4 bg-gradient-to-br from-white to-zinc-100 rounded-lg shadow-md backdrop-blur-sm border border-zinc-100 relative overflow-hidden">
                   <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white to-transparent opacity-80"></div>
                   <p className={`text-blue-800 text-xs relative z-10 ${exitcustomer === 'exited' ? 'text-red-600 font-bold' : ''}`}>
